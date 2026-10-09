@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": false, "outDir": ".bench", "rootDir": "." },
+  "include": ["bench", "test/e2e/git.ts"]
+}

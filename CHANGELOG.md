@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `npm run bench`: real Claude Code, plain vs `cw`, on a realistic repo (`@imports`, `.claude/rules`, nested `CLAUDE.md`, `CLAUDE.local.md`, hook, MCP server, skills, subagents, commands) in every worktree layout, or on your repo with `--repo`. Checks every feature still works under `cw` and that Claude Code loads the same tools, skills, agents, commands, MCP servers and plugins. Writes Markdown and JSON results. Not part of the package.
+
 ## 0.2.0
 
 - Every worktree layout shares one cache: sibling, nested in the repo (`.claude/worktrees/x`), in another tree (`~/worktrees/repo/task`), and any subfolder of one. `cw` now walks up to the git root.

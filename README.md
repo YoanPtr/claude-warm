@@ -122,6 +122,35 @@ git worktree add ../my-repo-b
 
 It costs a few cents. Compare the **cw, second dir** line against **plain claude, second dir**.
 
+## Benchmark: a real repo, not just CLAUDE.md
+
+```
+npm run bench                         # built-in realistic repo, about $1 on haiku
+npm run bench -- --repo ~/code/my-app # your repo, plus a temporary worktree of it (removed afterwards)
+npm run bench -- --only "work session" --model sonnet
+```
+
+Real Claude Code and real API usage. It uses your own `~/.claude` (login, plugins, skills, MCP), so the numbers are yours. Each scenario runs one session that warms the cache, then the measured session: once with plain `claude`, once with `cw`. Results go to `bench-results/<time>.md` and `.json`.
+
+The built-in repo has what busy repos have: a `CLAUDE.md` with an `@import`, an always-on and a path-scoped `.claude/rules` file, a nested `src/api/CLAUDE.md`, a `CLAUDE.local.md` per worktree, a SessionStart hook, an MCP server, 8 skills, 6 subagents and 4 commands. Each feature hides a secret word; the bench fails if a word plain `claude` finds is missed under `cw`. It also fails if Claude Code loads a different list of tools, MCP servers, skills, agents, commands or plugins under `cw`.
+
+Results on Claude Code 2.1.284, haiku, the built-in repo (2026-10-09):
+
+| Measured session | plain written | cw written | plain cost | cw cost | saved |
+|---|---:|---:|---:|---:|---:|
+| new session, same folder, after an edit | 18,548 | 9,015 | $0.039 | $0.021 | 46% |
+| sibling worktree | 18,764 | 9,214 | $0.040 | $0.021 | 46% |
+| dirty worktree, other branch | 18,767 | 9,217 | $0.040 | $0.021 | 46% |
+| nested worktree (`.claude/worktrees`) | 18,867 | 9,307 | $0.040 | $0.022 | 46% |
+| worktree in another folder | 18,769 | 9,217 | $0.040 | $0.021 | 46% |
+| subfolder of a worktree | 18,659 | 9,190 | $0.039 | $0.022 | 45% |
+| always-on features (no tools) | 18,793 | 9,243 | $0.041 | $0.022 | 45% |
+| work session: skill, subagent, MCP, nested files | 21,623 | 12,240 | $0.084 | $0.048 | 43% |
+
+All 10 features worked under `cw`, and Claude Code loaded the same tools, skills, agents, commands, MCP servers and plugins. About 9k tokens are still written under `cw`: `.claude/rules`, `CLAUDE.local.md`, the hook output and the skill list stay in the first message, which differs per worktree. Moving the always-on rules into the cached prompt is the next step.
+
+A small `CLAUDE.md` gains less: on a repo with a ~1k-token `CLAUDE.md`, a fresh worktree wrote 6,027 tokens instead of 6,556 (11%).
+
 ## Troubleshooting
 
 | Symptom | Cause / fix |

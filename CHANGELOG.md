@@ -3,6 +3,7 @@
 ## Unreleased
 
 - `npm run bench`: real Claude Code, plain vs `cw`, on a realistic repo (`@imports`, `.claude/rules`, nested `CLAUDE.md`, `CLAUDE.local.md`, hook, MCP server, skills, subagents, commands) in every worktree layout, or on your repo with `--repo`. Checks every feature still works under `cw` and that Claude Code loads the same tools, skills, agents, commands, MCP servers and plugins. Writes Markdown and JSON results. Not part of the package.
+- Bench cache map: each part of the first request (system prompt blocks, instruction files, skill and agent lists, hook output, git status) compared with the warm-up session, so you see what is reused, what is rewritten, and what `cw` could still cache.
 
 ## 0.2.0
 

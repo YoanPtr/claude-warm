@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { readParts, type Part } from './parts.js';
 
 export type Runner = 'plain' | 'cw';
 
@@ -30,6 +31,8 @@ export interface Session {
   /** Tool names called by the main agent, in order (`Skill:release-notes`, `Task:word-finder`, `mcp__bench__vault_word`). */
   calls: string[];
   loaded: Loaded;
+  /** The first request piece by piece, from the transcript (filled before the transcript is deleted). */
+  parts: Part[];
 }
 
 export interface Options {
@@ -61,13 +64,14 @@ export async function session(runner: Runner, cwd: string, prompt: string, o: Op
   const flags = ['-p', prompt, '--model', o.model, '--output-format', 'stream-json', '--verbose', '--max-budget-usd', String(o.budget)];
   const r = await exec(bin as string, [...pre, ...flags, ...(o.tools.length ? ['--allowedTools', o.tools.join(',')] : [])], cwd);
   if (r.status !== 0) throw new Error(`${runner} in ${cwd} failed (${r.status}): ${(r.err || r.out).slice(-800)}`);
-  return { runner, cwd, ...parseStream(r.out) };
+  const parsed = parseStream(r.out);
+  return { runner, cwd, ...parsed, parts: readParts(join(transcriptDir(cwd), `${parsed.id}.jsonl`), cwd) };
 }
 
 type Event = Record<string, any>;
 
 /** Reads Claude Code's `stream-json` output. Pure, so it is unit tested. */
-export function parseStream(out: string): Omit<Session, 'runner' | 'cwd'> {
+export function parseStream(out: string): Omit<Session, 'runner' | 'cwd' | 'parts'> {
   const events: Event[] = out.split('\n').filter((l) => l.startsWith('{')).map((l) => JSON.parse(l));
   const init = events.find((e) => e.type === 'system' && e.subtype === 'init');
   const result = events.find((e) => e.type === 'result');

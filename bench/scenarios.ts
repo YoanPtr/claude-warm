@@ -15,6 +15,8 @@ export interface Scenario {
   words: Record<string, string>;
   /** Runs between the two sessions, e.g. an edit that changes `git status`, as real work does. */
   between?: () => void;
+  /** Print this scenario's cache map in the report (every scenario's parts are in the JSON). */
+  map?: boolean;
 }
 
 export interface Outcome {
@@ -33,13 +35,13 @@ export function fixtureScenarios(f: Fixture): Scenario[] {
   const plainRun = (name: string, measure: string): Scenario => ({ name, warm: f.main, measure, prompt: OK, tools: [], words: {} });
   return [
     { ...plainRun('new session, same folder, after an edit', f.main), between: () => writeFileSync(join(f.main, `edit-${++edits}.txt`), 'x') },
-    plainRun('sibling worktree', f.wt2),
+    { ...plainRun('sibling worktree', f.wt2), map: true },
     plainRun('dirty worktree, other branch', f.wt),
     plainRun('nested worktree (.claude/worktrees)', f.nested),
     plainRun('worktree in another folder', f.far),
     plainRun('subfolder of a worktree', join(f.far, 'src')),
     { name: 'always-on features (no tools)', warm: f.main, measure: f.fresh[0], prompt: STATIC_PROMPT, tools: [], words: { ...WORDS.static } },
-    { name: 'work session: skill, subagent, MCP, nested files', warm: f.main, measure: f.fresh[1], prompt: WORK_PROMPT, tools: WORK_TOOLS, words: { ...WORDS.work } },
+    { name: 'work session: skill, subagent, MCP, nested files', warm: f.main, measure: f.fresh[1], prompt: WORK_PROMPT, tools: WORK_TOOLS, words: { ...WORDS.work }, map: true },
   ];
 }
 
@@ -47,7 +49,7 @@ export function fixtureScenarios(f: Fixture): Scenario[] {
 export function repoScenarios(repo: string, worktree: string): Scenario[] {
   return [
     { name: 'new session, same folder, nothing changed', warm: repo, measure: repo, prompt: OK, tools: [], words: {} },
-    { name: 'fresh worktree of the repo', warm: repo, measure: worktree, prompt: OK, tools: [], words: {} },
+    { name: 'fresh worktree of the repo', warm: repo, measure: worktree, prompt: OK, tools: [], words: {}, map: true },
   ];
 }
 

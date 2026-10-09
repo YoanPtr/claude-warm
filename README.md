@@ -149,7 +149,20 @@ Results on Claude Code 2.1.284, haiku, the built-in repo (2026-10-09):
 
 All 10 features worked under `cw`, and Claude Code loaded the same tools, skills, agents, commands, MCP servers and plugins. About 9k tokens are still written under `cw`: `.claude/rules`, `CLAUDE.local.md`, the hook output and the skill list stay in the first message, which differs per worktree. Moving the always-on rules into the cached prompt is the next step.
 
-A small `CLAUDE.md` gains less: on a repo with a ~1k-token `CLAUDE.md`, a fresh worktree wrote 6,027 tokens instead of 6,556 (11%).
+### Cache map: what is reused, what is rewritten
+
+The report also prints a cache map for the sibling-worktree and work-session scenarios (`--repo`: the fresh worktree). It reads each session's first request part by part from the transcript (system prompt blocks, `CLAUDE.md`, each rule file, skill list, agent list, hook output, git status...). Then it compares every part with the warm-up session: same, path changed, or changed. The API reuses the longest identical start of a request, so the first part that changes is where the cache breaks. It ends with the biggest parts `cw` still rewrites but could cache. On the built-in repo:
+
+| Part | plain | cw |
+|---|---|---|
+| `CLAUDE.md` (≈8.3k tokens) | first message, path changed: rewritten | system prompt, same: **read from cache** |
+| `.claude/rules/style.md` (≈2.6k) | path changed: rewritten | path changed: rewritten |
+| skill list (≈2.3k), agent list (≈0.6k) | same, but after a change: rewritten | same, but after a change: rewritten |
+| git status, environment | changed | changed |
+
+Plain `claude` rewrites `CLAUDE.md` in a new worktree only because its folder path is part of the text. Every part's sizes and hashes are in the JSON for every scenario.
+
+On real repos: one with a ~9k-token `CLAUDE.md`, 11 skills and 3 MCP servers wrote 8,700 tokens instead of 19,086 in a fresh worktree (49%), and 0 instead of 18,853 in a new session in the same folder. A repo with a ~1k-token `CLAUDE.md` gains less: 6,027 instead of 6,556 (11%).
 
 ## Troubleshooting
 

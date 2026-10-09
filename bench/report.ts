@@ -1,4 +1,5 @@
 import type { Loaded, Session } from './claude.js';
+import { cacheMap } from './map.js';
 import type { Outcome } from './scenarios.js';
 
 const n = (x: number) => x.toLocaleString('en-US');
@@ -56,7 +57,7 @@ function parityLines(outcomes: Outcome[]): string[] {
 }
 
 export function markdown(title: string, meta: string[], outcomes: Outcome[]): string {
-  return [`# ${title}`, '', ...meta.map((m) => `- ${m}`), '', '## Cache and cost of the measured session', '', ...costTable(outcomes), ...featureTable(outcomes), ...parityLines(outcomes), ''].join('\n');
+  return [`# ${title}`, '', ...meta.map((m) => `- ${m}`), '', '## Cache and cost of the measured session', '', ...costTable(outcomes), ...featureTable(outcomes), ...parityLines(outcomes), ...outcomes.filter((o) => o.scenario.map).flatMap(cacheMap), ''].join('\n');
 }
 
 /** Exit status: any feature plain found but cw missed, or anything loaded differently, fails the bench. */

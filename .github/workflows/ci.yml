@@ -1,0 +1,22 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ matrix.node }}' }
+      - run: npm install
+      - run: npm run check
+      - run: npm run build
+      - name: smoke (dry run prints the plan)
+        run: |
+          mkdir -p /tmp/demo && echo "rules" > /tmp/demo/CLAUDE.md
+          cd /tmp/demo && CW_HOME=/tmp/cw-home CW_DRY_RUN=1 node "$GITHUB_WORKSPACE/dist/main.js" -c | grep -q exclude-dynamic-system-prompt-sections

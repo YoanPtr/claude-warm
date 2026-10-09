@@ -1,0 +1,28 @@
+{
+  "name": "claude-warm",
+  "version": "0.1.0",
+  "description": "Launch Claude Code with your repo's CLAUDE.md in the cached system prompt, so new sessions and sibling worktrees reuse the prompt cache.",
+  "keywords": ["claude", "claude-code", "prompt-cache", "cli", "worktree", "anthropic"],
+  "license": "MIT",
+  "author": "Yoan Pontier",
+  "repository": { "type": "git", "url": "git+https://github.com/YoanPtr/claude-warm.git" },
+  "homepage": "https://github.com/YoanPtr/claude-warm#readme",
+  "bugs": { "url": "https://github.com/YoanPtr/claude-warm/issues" },
+  "type": "module",
+  "bin": { "cw": "dist/main.js" },
+  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && chmod +x dist/main.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "publishConfig": { "access": "public" }
+}

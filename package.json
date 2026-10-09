@@ -1,6 +1,6 @@
 {
   "name": "claude-warm",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Launch Claude Code with your repo's CLAUDE.md in the cached system prompt, so new sessions and sibling worktrees reuse the prompt cache.",
   "keywords": [
     "claude",

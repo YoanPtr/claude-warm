@@ -1,15 +1,17 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, realpathSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { makeRepos } from './git.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '../..');
 const fake = join(root, 'test/e2e/fake-claude.mjs');
 const tmp = realpathSync(mkdtempSync(join(tmpdir(), 'cw-e2e-')));
 let bin = '';
+afterAll(() => rmSync(tmp, { recursive: true, force: true }));
 
 /** Install the PACKED tarball into a clean prefix, as a user would, and return the `cw` it provides. */
 beforeAll(() => {
@@ -97,5 +99,38 @@ describe('cw, installed from the packed tarball', () => {
     const r = cw(repo('dry', 'x'), ['-c'], { CW_DRY_RUN: '1' });
     expect(r.seen).toBeUndefined();
     expect(JSON.parse(r.stdout).args).toContain('--exclude-dynamic-system-prompt-sections');
+  });
+});
+
+describe('with real git worktrees', () => {
+  const repos = makeRepos('shared rules');
+  afterAll(() => rmSync(repos.base, { recursive: true, force: true }));
+
+  it('runs in the worktree and excludes the worktree\'s own files, not the main repo\'s', () => {
+    const { seen } = cw(repos.wt, ['-c']);
+    expect(seen?.cwd).toBe(repos.wt);
+    const settings = JSON.parse(seen?.args[4] ?? '{}');
+    expect(settings.claudeMdExcludes).toEqual([`${repos.wt}/CLAUDE.md`, `${repos.wt}/AGENTS.md`]);
+  });
+
+  it('appends the text once even though AGENTS.md is a symlink to CLAUDE.md', () => {
+    expect(cw(repos.wt, []).seen?.appended).toBe('shared rules');
+  });
+
+  it('gives the main repo and both worktrees the same file: that is the shared cache entry', () => {
+    const files = [repos.main, repos.wt, repos.wt2].map((d) => cw(d, []).seen?.args[1]);
+    expect(new Set(files).size).toBe(1);
+  });
+
+  it('uses each worktree\'s own CLAUDE.md when branches differ', () => {
+    writeFileSync(join(repos.wt2, 'CLAUDE.md'), 'branch rules');
+    expect(cw(repos.wt2, []).seen?.appended).toBe('branch rules');
+    expect(cw(repos.wt, []).seen?.args[1]).not.toBe(cw(repos.wt2, []).seen?.args[1]);
+  });
+
+  it('from a subfolder (no CLAUDE.md there) it changes nothing: claude keeps its normal behaviour', () => {
+    const sub = join(repos.main, 'src');
+    mkdirSync(sub);
+    expect(cw(sub, ['-c']).seen?.args).toEqual(['-c']);
   });
 });

@@ -83,6 +83,7 @@ If `AGENTS.md` is a symlink to `CLAUDE.md`, the text is appended once and both p
 - The `CLAUDE.md` text is read **once, at session start**. Edit it, then start a new session.
 - The prompt cache lasts about 5 minutes. The first session after a pause still writes; the gain is across sessions started close together (agents, worktrees, repeated runs).
 - Two different `CLAUDE.md` files have two different caches. The gain needs identical text, which is the case for worktrees of one repo.
+- Run `cw` at the folder that holds `CLAUDE.md` (the repo or worktree root). From a subfolder it changes nothing and `claude` behaves normally.
 - Resuming a session that was started with plain `claude` carries `CLAUDE.md` twice (the old first message plus the append).
 - Relies on these Claude Code flags: `--append-system-prompt-file`, `--exclude-dynamic-system-prompt-sections`, `--settings` with `claudeMdExcludes`. Tested on 2.1.284. If a future version changes them, `CW_DRY_RUN=1` shows what we pass; please open an issue.
 - Tested on macOS. Linux should work (CI runs there). Windows is untested.
@@ -108,7 +109,7 @@ Costs a few cents. Compare the **cw, second dir** line against **plain claude, s
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). `npm run check` runs types, unit tests, and an end-to-end suite (packed tarball installed in a clean folder, run against a fake `claude`). `npm run e2e:real` runs the cache check against your real Claude Code. A change to the three flags needs a fresh `scripts/measure.sh` result in the PR.
+See [CONTRIBUTING.md](CONTRIBUTING.md). `npm run check` runs types, unit tests, and an end-to-end suite (packed tarball installed in a clean folder, real git worktrees, a fake `claude`). `npm run e2e:real` runs 5 checks against your real Claude Code and real worktrees: cache saving, no double load, instructions followed, branch and dirty files still known, edits picked up. A change to the three flags needs a fresh `scripts/measure.sh` result in the PR.
 
 ## Licence
 

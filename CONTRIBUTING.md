@@ -1,8 +1,8 @@
 # Contributing
 
 1. `npm install`
-2. `npm run check` (types, unit tests, and an end-to-end suite that installs the packed tarball and runs `cw` against a fake `claude`) must pass.
-   Real Claude, real API, a few cents: `npm run e2e:real` (needs `claude` logged in; asserts the second folder writes at least 5x fewer cache tokens).
+2. `npm run check` (types, unit tests, and an end-to-end suite: the packed tarball is installed in a clean folder and run against a fake `claude`, including real git worktrees) must pass.
+   Real Claude, real API, real git repo and worktrees, a few cents to a dollar: `npm run e2e:real` (needs `claude` logged in). It checks the cache saving, that CLAUDE.md is not loaded twice, that instructions are followed, that branch and dirty files are still known, and that edits apply to the next session.
 3. Behaviour change in `plan.ts`: add a test in `test/plan.test.ts`.
 4. A change to the three flags needs a fresh measurement: `scripts/measure.sh <dirA> <dirB>`, paste the numbers in the PR.
 

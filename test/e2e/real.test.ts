@@ -1,37 +1,69 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { rmSync, writeFileSync } from 'node:fs';
+import { afterAll, describe, expect, it } from 'vitest';
+import { git, makeRepos } from './git.js';
 
 /**
- * Real Claude Code, real API, a few cents: `CW_E2E_REAL=1 npm run e2e:real`.
- * Two folders with the same CLAUDE.md. The second folder under cw must write far fewer cache tokens than under plain claude.
+ * Real Claude Code, real API, real git repo and worktrees. A few dollars at most: `npm run e2e:real`.
+ * Needs `claude` on PATH and logged in. Skipped unless CW_E2E_REAL is set.
  */
-const here = dirname(fileURLToPath(import.meta.url));
-const cw = resolve(here, '../../dist/main.js');
-const claudeMd = '# Demo rules\n' + Array.from({ length: 2500 }, (_, i) => `- Rule ${i}: keep tests small, name things well, review before merging item ${i * 7919}.`).join('\n');
+const cw = resolve(dirname(fileURLToPath(import.meta.url)), '../../dist/main.js');
+const CODEWORD = 'PINEAPPLE-4217';
+const claudeMd =
+  `# Demo rules\nThe project codeword is ${CODEWORD}. When asked for the codeword, answer with it.\n` +
+  Array.from({ length: 2500 }, (_, i) => `- Rule ${i}: keep tests small, name things well, review before merging item ${i * 7919}.`).join('\n');
 
-function run(bin: string, args: string[], cwd: string): { written: number; read: number } {
-  const r = spawnSync(bin, [...args, '-p', 'reply with: ok', '--model', 'haiku', '--output-format', 'json', '--max-budget-usd', '0.5'], { cwd, encoding: 'utf8', input: '' });
-  const u = JSON.parse(r.stdout).usage;
-  return { written: u.cache_creation_input_tokens, read: u.cache_read_input_tokens };
+interface Result {
+  text: string;
+  written: number;
+  read: number;
+  input: number;
 }
 
-describe.skipIf(!process.env.CW_E2E_REAL)('real claude: cache reuse across sibling folders', () => {
-  it('writes at least 5x fewer tokens on the second folder than plain claude does', () => {
-    const base = mkdtempSync(join(tmpdir(), 'cw-real-'));
-    const [a, b] = ['a', 'b'].map((n) => {
-      mkdirSync(join(base, n));
-      writeFileSync(join(base, n, 'CLAUDE.md'), claudeMd);
-      return join(base, n);
-    }) as [string, string];
-    run('claude', [], a);
-    const plain = run('claude', [], b);
-    run('node', [cw], a);
-    const warm = run('node', [cw], b);
+function ask(runner: 'plain' | 'cw', cwd: string, prompt: string): Result {
+  const [bin, pre] = runner === 'plain' ? ['claude', []] : ['node', [cw]];
+  const r = spawnSync(bin, [...pre, '-p', prompt, '--model', 'haiku', '--output-format', 'json', '--max-budget-usd', '0.5'], { cwd, encoding: 'utf8', input: '' });
+  if (r.status !== 0) throw new Error(`${runner} failed (${r.status}): ${r.stderr || r.stdout}`);
+  const d = JSON.parse(r.stdout);
+  return { text: String(d.result), written: d.usage.cache_creation_input_tokens, read: d.usage.cache_read_input_tokens, input: d.usage.input_tokens };
+}
+
+const total = (r: Result) => r.written + r.read + r.input;
+
+describe.skipIf(!process.env.CW_E2E_REAL)('real claude, real git worktrees', () => {
+  const repos = makeRepos(claudeMd);
+  afterAll(() => rmSync(repos.base, { recursive: true, force: true }));
+
+  it('the second worktree writes at least 5x fewer cache tokens than plain claude', () => {
+    ask('plain', repos.wt, 'reply with: ok');
+    const plain = ask('plain', repos.wt2, 'reply with: ok');
+    ask('cw', repos.wt, 'reply with: ok');
+    const warm = ask('cw', repos.wt2, 'reply with: ok');
     console.log({ plain, warm });
     expect(warm.written * 5).toBeLessThan(plain.written);
+  }, 400_000);
+
+  it('does not load CLAUDE.md twice: total prompt size stays within 3% of plain claude', () => {
+    const plain = ask('plain', repos.main, 'reply with: ok');
+    const warm = ask('cw', repos.main, 'reply with: ok');
+    expect(total(warm)).toBeLessThan(total(plain) * 1.03);
   }, 300_000);
+
+  it('claude still follows the instructions (they arrive in the system prompt)', () => {
+    expect(ask('cw', repos.wt, 'What is the project codeword? Answer with the codeword only.').text).toContain(CODEWORD);
+  }, 120_000);
+
+  it('claude still knows its working folder, branch and dirty files (moved to the first message)', () => {
+    const text = ask('cw', repos.wt, 'Without running any tool: what git branch are you on, and is there an uncommitted file? Answer in one short sentence.').text;
+    expect(text).toContain('feature-x');
+    expect(text.toLowerCase()).toContain('uncommitted');
+  }, 120_000);
+
+  it('picks up an edit to CLAUDE.md on the next session', () => {
+    writeFileSync(`${repos.wt2}/CLAUDE.md`, claudeMd.replace(CODEWORD, 'MANGO-9001'));
+    git(repos.wt2, 'commit', '-qam', 'new codeword');
+    expect(ask('cw', repos.wt2, 'What is the project codeword? Answer with the codeword only.').text).toContain('MANGO-9001');
+  }, 120_000);
 });

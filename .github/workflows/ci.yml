@@ -2,6 +2,8 @@ name: ci
 on:
   push: { branches: [main] }
   pull_request:
+permissions:
+  contents: read
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -13,10 +15,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '${{ matrix.node }}' }
-      - run: npm install
+      - run: npm ci
+      # Types, unit tests, and the e2e suite: packed tarball, real git worktrees, fake claude.
       - run: npm run check
-      - run: npm run build
-      - name: smoke (dry run prints the plan)
-        run: |
-          mkdir -p /tmp/demo && echo "rules" > /tmp/demo/CLAUDE.md
-          cd /tmp/demo && CW_HOME=/tmp/cw-home CW_DRY_RUN=1 node "$GITHUB_WORKSPACE/dist/main.js" -c | grep -q exclude-dynamic-system-prompt-sections

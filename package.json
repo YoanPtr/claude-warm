@@ -1,14 +1,16 @@
 {
   "name": "claude-warm",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Launch Claude Code with your repo's CLAUDE.md in the cached system prompt, so new sessions and sibling worktrees reuse the prompt cache.",
   "keywords": [
+    "anthropic",
     "claude",
     "claude-code",
-    "prompt-cache",
+    "claude-md",
     "cli",
-    "worktree",
-    "anthropic"
+    "git-worktree",
+    "prompt-cache",
+    "worktree"
   ],
   "license": "MIT",
   "author": "Yoan Pontier",
@@ -39,7 +41,7 @@
     "test": "vitest run --exclude test/e2e/real.test.ts",
     "check": "npm run typecheck && npm test",
     "prepublishOnly": "npm run build && npm test",
-    "e2e:real": "CW_E2E_REAL=1 vitest run test/e2e/real.test.ts"
+    "e2e:real": "npm run build && CW_E2E_REAL=1 vitest run test/e2e/real.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

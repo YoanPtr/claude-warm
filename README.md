@@ -108,7 +108,7 @@ Costs a few cents. Compare the **cw, second dir** line against **plain claude, s
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). `npm run check` runs types and tests. A change to the three flags needs a fresh `scripts/measure.sh` result in the PR.
+See [CONTRIBUTING.md](CONTRIBUTING.md). `npm run check` runs types, unit tests, and an end-to-end suite (packed tarball installed in a clean folder, run against a fake `claude`). `npm run e2e:real` runs the cache check against your real Claude Code. A change to the three flags needs a fresh `scripts/measure.sh` result in the PR.
 
 ## Licence
 
